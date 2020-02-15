@@ -1,8 +1,8 @@
 # Statistical SAT Attack - StatSAT
 
-This is a SAT-based attack on probabilistic circuits which have been secured by locking. The code has been developed on top of the PSAT (Probabilistic SAT) attack developed by Satwik Patnaik and others. PSAT is located at https://github.com/DfX-NYUAD/PSAT
+This is a SAT-based attack on probabilistic circuits which have been secured by logic locking. The code has been developed on top of the PSAT (Probabilistic SAT) attack developed by Satwik Patnaik and others. PSAT is located at https://github.com/DfX-NYUAD/PSAT
 
-The source code is provided in */source/src* and the binary executable is also located there. Some benchmarks in available in the */benchmarks* folder. Subfolder */ORIGINAL* has the original circuit netlist files, and */gate_errors* contains gate-level error probabilities for different circuits. Other subfolders have the locked circuits along with their known correct key (since locked circuit fitted with correct key is used as an oracle). Also, */benchmarks/gate_errors/probabilistic* contains *gen_stoch_file_prob.py* which can be used to create the .stoch files listing the gate-level error probabilities. This file starts with something of this sort:
+The source code is provided in */source/src* and the binary executable is also located there. Some benchmarks are available in the */benchmarks* folder. Subfolder */ORIGINAL* has the original circuit netlist files, and */gate_errors* contains gate-level error probabilities for different circuits. Other subfolders have the locked circuits along with their known correct key (since locked circuit fitted with correct key is used as an oracle). Also, */benchmarks/gate_errors/probabilistic* contains *gen_stoch_file_prob.py* which can be used to create the .stoch files listing the gate-level error probabilities. This file starts with something of this sort:
 
 	OUTPUT_SAMPLING_ON OUTPUT_SAMPLING_ITERATIONS OUTPUT_SAMPLING_FOR_TEST_ON TEST_PATTERNS
 	true 500 true 2000
