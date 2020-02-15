@@ -1,0 +1,22 @@
+# Encrypted version of split_gates_test.bench (to test the use of function split_gates() in ckt.cpp)
+
+#INPUT(G1gat) INPUT(G2gat)INPUT(G3gat)INPUT(G4gat)INPUT(G5gat)INPUT(G6gat)INPUT(keyinput0)OUTPUT(G24gat)G11gat = NAND(G1gat,G2gat,G3gat)G12gat = OR(G11gat,G4gat)G13gat = OR(G3gat,G5gat,G6gat)G13gat$enc = XNOR(G13gat,keyinput0)G24gat = AND(G12gat,G13gat$enc)
+
+INPUT(G1gat)
+INPUT(G2gat) 
+INPUT(G3gat) 
+INPUT(G4gat) 
+INPUT(G5gat) 
+INPUT(G6gat)
+INPUT(G7gat) 
+INPUT(G8gat) 
+INPUT(G9gat)
+INPUT(keyinput0)
+
+OUTPUT(G13gat)
+
+G11gat = NAND(G1gat,G2gat,G3gat,G4gat)
+G12gat = NOR(G11gat,G5gat,G6gat,G7gat,G8gat)
+G9gat$enc = XNOR(G9gat,keyinput0)
+G13gat = AND(G12gat,G9gat$enc)
+
