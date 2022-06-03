@@ -53,7 +53,8 @@ namespace ckt_n {
 	std::vector<poly_fct> polymorphic_fcts;
     double output_prob = 0; // Ankit - the probability that the output is 1 (signal prob)
     double error_prob = 0; //Ankit - the probability of an error in the signal
-
+        double herk_avg_err_prob = 0;
+      
         unsigned num_inputs() const { return inputs.size(); }
         unsigned num_fanouts() const { return fanouts.size(); }
 

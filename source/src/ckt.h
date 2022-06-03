@@ -45,6 +45,7 @@ namespace ckt_n {
 	    unsigned test_patterns = 1e03;
         int trials_error = 100; // Ankit - No. of keys to use for determining error rate
         // for a distinguishing input
+        int num_herks = 10;
         double uncert_limit = 0.25;
         double ydiff_limit = 0.3;
 
@@ -198,6 +199,10 @@ namespace ckt_n {
 	    void dump_gate_info(node_t* gate); //Ankit
         void dump_all_gates_info(); //Ankit
         std::pair<std::vector<double>,std::vector<double>> evaluate_probs(const std::vector<bool> input_values, const std::vector<double> key_values, bool error, bool est); // Ankit
+        void evaluate_probs_herk(const std::vector<bool> input_values, const std::vector<double> key_values);
+        void init_error_probs_herk();
+      void print_error_probs_herk(int num_herks, int num_input_samples);
+      //      std::pair<std::vector<double>,std::vector<double>> evaluate_probs(const std::vector<bool> input_values, const std::vector<double> key_values, bool error, bool est); // Ankit
         void read_known_key(std::string file); //Ankit
         void get_num_error_gates();
 

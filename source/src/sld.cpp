@@ -35,6 +35,7 @@ int print_info = 0;
 int slice = 0;
 int tv_quit = 0;
 int more_keys = 1;
+int herk_insert = 0;
 
 volatile solver_t* solver = NULL;
 std::string known_keystring;
@@ -45,7 +46,7 @@ int sld_main(int argc, char* argv[])
     int cpu_limit = -1;
     int64_t data_limit = -1;
 
-    while ((c = getopt (argc, argv, "ihvptTc:m:k:sN:")) != -1) {
+    while ((c = getopt (argc, argv, "ihvptTcH:m:k:sN:")) != -1) {
         switch (c) {
             case 'h':
                 return print_usage(argv[0]);
@@ -80,6 +81,9 @@ int sld_main(int argc, char* argv[])
             case 'N':
                 more_keys = atoi(optarg);
                 break;
+            case 'H':
+	      herk_insert = 1;
+	      break;
             default:
                 break;
         }
@@ -256,7 +260,7 @@ int slice_solve(std::map<std::string, int>& keysFound, ckt_n::ckt_t& ckt, ckt_n:
 
         // do the sliced solving.
         std::map<std::string, int> newKeysFound;
-        solver_t S(ckt, simckt, verbose);
+        solver_t S(ckt, simckt, verbose, herk_insert);
         if(S.sliceAndSolve(newKeysFound, maxKeys, maxNodes) == 0) {
             std::cout << "infeasible cplex model. " << std::endl;
             break;
@@ -326,72 +330,110 @@ void solve(ckt_n::ckt_t& ckt, ckt_n::ckt_t& simckt)
 
     simckt.split_gates();
 
-    if(!ckt.estimated_error)
-        std::cout<<"Attacker using actual error rates. \nEnter 1 to switch to estimate error rates, ";
-    else
-        std::cout<<"Attacker estimates circuit error rate. \nEnter 1 to switch to using actual error rates, ";
-    std::cout<<"else enter any other number: ";
-    int dummy; std::cin>>dummy;
-    if(dummy==1)
-        ckt.estimated_error = !ckt.estimated_error;
+    // Only go into StatSAT parameter loop if we are running Statsat (not inserting herks)
+    int num_instances=2;
+    int num_iovecs = 1;   
+    if(herk_insert){
 
-    int num_instances=2; int num_iovecs = 1;
-
-    std::cout<<"Parameters: \n";
-    std::cout<<"1) Number of satisfying keys to estimate output BERs (N_satis) = "<<ckt.trials_error<<"\n";
-    std::cout<<"2) Threshold above which to declare uncertainty from oracle response (U_lambda) = "<<ckt.uncert_limit<<"\n";
-    std::cout<<"3) Threshold above which to declare uncertainty from suspected error rate (E_lambda) = "<<ckt.ydiff_limit<<"\n";
-    std::cout<<"4) Number of SAT solver instances (N_inst)= "<<num_instances<<"\n";
-    std::cout<<"5) Number of distinguishing I/O vectors to print = "<<num_iovecs<<"\n";
-    std::cout<<"6) Number of samples per input pattern (during and after attack, but not in final evaluation) (N_s) = "<<ckt.IO_sampling_iter<<"\n";
-    std::cout<<"7) Number of input patters when verifying solution (during and after attack, but not in final evaluation) (N_eval) = "<<ckt.test_patterns<<"\n\n";
-
-    std::cout<<"Enter 0 to proceed with these options. Or the option number to change them\n";
-    int action; std::cin>>action;
-    do
-    {
-        switch(action)
-        {
+      std::cout<<"Identifying locations for High Error Rate Key (HERK) insertion within the circuit: \n";
+      std::cout<<"Parameters: \n";
+      std::cout<<"1) Number of HERK insertion locations to identify = "<<ckt.num_herks<<"\n";
+      std::cout<<"2) Number of random inputs to use to identify HERK insertion locations = "<<ckt.trials_error<<"\n";
+      std::cout<<"Enter 0 to proceed with these options. Or the option number to change them\n";
+      
+      int action; std::cin>>action;
+      do
+	{
+	  switch(action)
+	    {
             case 0:
-                std::cout<<"Proceeding with default\n";
-                break;
+	      std::cout<<"Proceeding with default\n";
+	      break;
             case 1:
-                std::cout<<"Enter no. of satisfying keys to estimate output BERs: ";
-                std::cin>>ckt.trials_error;
-                break;
+	      std::cout<<"Enter number of HERK insertion locations to identify: ";
+	      std::cin>>ckt.num_herks;
+	      break;
             case 2:
-                std::cout<<"Enter uncertainty threshold from oracle response: ";
-                std::cin>>ckt.uncert_limit;
-                break;
-            case 3:
-                std::cout<<"Enter uncertainty threshold from suspected error rate: ";
-                std::cin>>ckt.ydiff_limit;
-                break;
-            case 4:
-                std::cout<<"Enter Number of SAT solver instances: ";
-                std::cin>>num_instances;
-                break;
-            case 5:
-                std::cout<<"Enter Number of I/O vectors to print: ";
-                std::cin>>num_iovecs;
-                break;
-            case 6:
-                std::cout<<"Enter number of samples of output per input pattern: ";
-                std::cin>>ckt.IO_sampling_iter;
-                break;
-            case 7:
-                std::cout<<"Enter number of input patterns: ";
-                std::cin>>ckt.test_patterns;
-                break;
+	      std::cout<<"Enter number of random inputs to use to identify HERK insertion locations: ";
+	      std::cin>>ckt.trials_error;
+	      break;
             default:
-                std::cout<<"Wrong option. Please try again: ";
-        }
-        if(action==0)
+	      std::cout<<"Wrong option. Please try again: ";
+	    }
+	  if(action==0)
             break;
-        std::cout<<"Enter 0 to proceed, or option number to change: ";
-        std::cin>>action;
-    }while(action>0);
+	  std::cout<<"Enter 0 to proceed, or option number to change: ";
+	  std::cin>>action;
+	}while(action>0);
 
+      
+    } else {
+      if(!ckt.estimated_error)
+        std::cout<<"Attacker using actual error rates. \nEnter 1 to switch to estimate error rates, ";
+      else
+        std::cout<<"Attacker estimates circuit error rate. \nEnter 1 to switch to using actual error rates, ";
+      std::cout<<"else enter any other number: ";
+      int dummy; std::cin>>dummy;
+      if(dummy==1)
+        ckt.estimated_error = !ckt.estimated_error;
+      
+      std::cout<<"Parameters: \n";
+      std::cout<<"1) Number of satisfying keys to estimate output BERs (N_satis) = "<<ckt.trials_error<<"\n";
+      std::cout<<"2) Threshold above which to declare uncertainty from oracle response (U_lambda) = "<<ckt.uncert_limit<<"\n";
+      std::cout<<"3) Threshold above which to declare uncertainty from suspected error rate (E_lambda) = "<<ckt.ydiff_limit<<"\n";
+      std::cout<<"4) Number of SAT solver instances (N_inst)= "<<num_instances<<"\n";
+      std::cout<<"5) Number of distinguishing I/O vectors to print = "<<num_iovecs<<"\n";
+      std::cout<<"6) Number of samples per input pattern (during and after attack, but not in final evaluation) (N_s) = "<<ckt.IO_sampling_iter<<"\n";
+      std::cout<<"7) Number of input patters when verifying solution (during and after attack, but not in final evaluation) (N_eval) = "<<ckt.test_patterns<<"\n\n";
+
+      std::cout<<"Enter 0 to proceed with these options. Or the option number to change them\n";
+      
+      int action; std::cin>>action;
+      do
+	{
+	  switch(action)
+	    {
+            case 0:
+	      std::cout<<"Proceeding with default\n";
+	      break;
+            case 1:
+	      std::cout<<"Enter no. of satisfying keys to estimate output BERs: ";
+	      std::cin>>ckt.trials_error;
+	      break;
+            case 2:
+	      std::cout<<"Enter uncertainty threshold from oracle response: ";
+	      std::cin>>ckt.uncert_limit;
+	      break;
+            case 3:
+	      std::cout<<"Enter uncertainty threshold from suspected error rate: ";
+	      std::cin>>ckt.ydiff_limit;
+	      break;
+            case 4:
+	      std::cout<<"Enter Number of SAT solver instances: ";
+	      std::cin>>num_instances;
+	      break;
+            case 5:
+	      std::cout<<"Enter Number of I/O vectors to print: ";
+	      std::cin>>num_iovecs;
+	      break;
+            case 6:
+	      std::cout<<"Enter number of samples of output per input pattern: ";
+	      std::cin>>ckt.IO_sampling_iter;
+	      break;
+            case 7:
+	      std::cout<<"Enter number of input patterns: ";
+	      std::cin>>ckt.test_patterns;
+	      break;
+            default:
+	      std::cout<<"Wrong option. Please try again: ";
+	    }
+	  if(action==0)
+            break;
+	  std::cout<<"Enter 0 to proceed, or option number to change: ";
+	  std::cin>>action;
+	}while(action>0);
+    }
+    
     std::vector<bool> done(num_instances,false);
     std::vector<std::map<std::string, int>> keysFound(num_instances);
     std::vector<solver_t*> S(num_instances); // make space for SAT instances
@@ -402,7 +444,7 @@ void solve(ckt_n::ckt_t& ckt, ckt_n::ckt_t& simckt)
     std::queue<int> available; // queue of SAT instances available for use
     for (int i = 0; i < num_instances; ++i)
     {
-        Sptr = new solver_t(ckt, simckt, verbose);  // create multiple SAT instances
+      Sptr = new solver_t(ckt, simckt, verbose, herk_insert);  // create multiple SAT instances
         S[i] = Sptr;
         if (i>0)
             available.push(i);
@@ -413,6 +455,15 @@ void solve(ckt_n::ckt_t& ckt, ckt_n::ckt_t& simckt)
     ckt.split_gates();
     std::cout<<"Ckt info: Num gates = "<<ckt.num_gates()<<"\n";
 
+    // If we are trying to find herk insertion locations, go ahead and create a set of random inputs and eval.
+    if(herk_insert) {
+
+      // Calculate highest error region for n random inputs
+      S[0]->estimate_error_rate_herk(); // estimate error rate in oracle or unlocked circuit
+
+      exit(0);
+    }
+    
     if(ckt.estimated_error)
         ckt.est_error_rate = S[0]->estimate_error_rate(); // estimate error rate in oracle or unlocked circuit
     else
@@ -493,7 +544,7 @@ void solve(ckt_n::ckt_t& ckt, ckt_n::ckt_t& simckt)
                 {
                     delete S[i]; // kill this instance and make space for a new one
                     available.push(i);
-                    S[i] = new solver_t(ckt, simckt, verbose); 
+                    S[i] = new solver_t(ckt, simckt, verbose, herk_insert); 
                     done[i] = false;
                     std::cout<<"\n $$$$ Sample "<<i<<" is reborn $$$$"<<"\n";
                 }

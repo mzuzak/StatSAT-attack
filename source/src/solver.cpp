@@ -17,7 +17,7 @@
 #include <ilcplex/ilocplex.h>
 ILOSTLBEGIN
 
-solver_t::solver_t(ckt_n::ckt_t& c, ckt_n::ckt_t& s, int verb)
+solver_t::solver_t(ckt_n::ckt_t& c, ckt_n::ckt_t& s, int verb, int herk_ins)
     : ckt(c)
     , simckt(s)
     , sim(s, s.ckt_inputs)
@@ -28,6 +28,7 @@ solver_t::solver_t(ckt_n::ckt_t& c, ckt_n::ckt_t& s, int verb)
     , key_found(ckt.num_key_inputs(), false)
     , fixed_keys(ckt.num_key_inputs(), false)
     , verbose(verb)
+    , herk_insert(herk_ins)
     , iter(0)
     , backbones_count(0)
     , cube_count(0)
@@ -94,7 +95,7 @@ solver_t::solver_t(ckt_n::ckt_t& c, ckt_n::ckt_t& s, int verb)
 	//
 	auto now = std::chrono::high_resolution_clock::now();
 	auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
-	srand(nanos);
+	//srand(nanos);
 }
 
 // void solver_t::check_simckt()
@@ -512,7 +513,7 @@ std::vector<double> solver_t::satis_error_rate(const std::vector<bool> dist_inpu
     using namespace ckt_n;
     using namespace AllSAT;
 
-    solver_t *Sdup = new solver_t(ckt,simckt,0); 
+    solver_t *Sdup = new solver_t(ckt,simckt,0,0); 
     Sdup->feed_iovectors(iovectors,false);
     // std::cout<<"After duplicating, I/O vectors of Sdup:\n";
     // Sdup->dump_iovectors(-1);
@@ -547,7 +548,7 @@ std::vector<double> solver_t::satis_error_rate(const std::vector<bool> dist_inpu
     }
 
     std::cout<<"Average error with "<<count<<" satisfying keys: ";
-    // dump_vec_dbl(yerr_avg); 
+    dump_vec_dbl(yerr_avg); 
     std::cout<<"\n";
 
     delete Sdup;
@@ -625,10 +626,44 @@ std::vector<double> solver_t::random_error_rate(const std::vector<bool> dist_inp
     }
 
     std::cout<<"Average error with "<<ckt.trials_error<<" random keys: ";
-    // dump_vec_dbl(yerr_avg); 
+    dump_vec_dbl(yerr_avg); 
     std::cout<<"\n";
     return yerr_avg;
 }
+
+
+
+// Ankit - Before the attack starts, the attacker tries to estimate the error rate in the circuit
+double solver_t::estimate_error_rate_herk()
+{
+    using namespace ckt_n;
+    std::cout<<"Calculating HERK insertion locations... \n";
+    int num_rand_inputs = ckt.trials_error;
+    int num_herks = ckt.num_herks;
+
+    // Init all circuit error rates to zero
+    ckt.init_error_probs_herk();
+
+    for(int inp=0; inp<num_rand_inputs; inp++)
+    {
+        std::vector<bool> input(ckt.num_ckt_inputs(),false);
+        for(int i=0; i<input.size(); i++)
+            if((static_cast<double>(rand()) / RAND_MAX)<0.5)
+                input[i] = true;  // 50% chance of being 1
+
+	// Calculate gate error probabilities for random input
+	ckt.evaluate_probs_herk(input, to_double(ckt.known_correct_key)); 
+	
+    }
+
+
+    // Print out the max gate error probability gates for manual herk insertion
+    ckt.print_error_probs_herk(num_herks, num_rand_inputs);
+
+    return 0;
+    
+}
+	
 
 // Ankit - Before the attack starts, the attacker tries to estimate the error rate in the circuit
 double solver_t::estimate_error_rate()
@@ -755,6 +790,7 @@ double solver_t::estimate_error_rate()
     // std::cout<<"Actual error average = "<<actual_error_avg<<", maximum = "<<actual_error_max<<"\n";
     avg_err_cross = std::max(avg_err_cross,0.0);
     std::cout<<"Average error cross (estimated error rate) = "<<avg_err_cross<<"\n";
+
     return avg_err_cross;
 }
 
@@ -1684,7 +1720,7 @@ void solver_t::solveSlice(
     }
 
     // actual solving.
-    solver_t S(*slice.cktslice, *slice.simslice, 0);
+    solver_t S(*slice.cktslice, *slice.simslice, 0, 0);
     S.MAX_VERIF_ITER = 1;
 
     S.time_limit = 60;

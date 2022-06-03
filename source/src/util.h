@@ -8,6 +8,7 @@
 #include "SATInterface.h"
 
 extern int verbose;
+extern int herk_insert;
 
 extern const int ALLSATCKT_VERBOSE;
 extern const int B2QBF_VERBOSE;

@@ -166,6 +166,7 @@ private:
 public:
     // flags and limits.
     int verbose;
+    int herk_insert;
     double time_limit;
     struct rusage ru_start;
     double final_avg_ydiff; //Ankit
@@ -182,7 +183,7 @@ public:
 
     iovalue_vector_t iovectors;
 
-    solver_t(ckt_n::ckt_t& ckt, ckt_n::ckt_t& sim, int verbose);
+    solver_t(ckt_n::ckt_t& ckt, ckt_n::ckt_t& sim, int verbose, int herk_insert);
     // solver_t();
     ~solver_t();
 
@@ -216,6 +217,7 @@ public:
     bool set_fork(bool force_proceed); // Ankit
     double vec_dbl_diff_avg(const std::vector<double> x, const std::vector<double> y); //Ankit
     double estimate_error_rate(); // Ankit
+    double estimate_error_rate_herk();
     double get_norm(std::vector<double> x, std::vector<double> y, int n); // Ankit
     void final_solution(std::vector<bool> key); //Ankit
 

@@ -1069,12 +1069,124 @@ namespace ckt_n {
         return mean_output_values;
     }
 
+    // Init all error probabilities to 0 for herk insertion
+    void ckt_t::init_error_probs_herk()
+    {
+
+        for (int i = 0; i < ckt_inputs.size(); ++i)
+        {
+            ckt_inputs[i]->herk_avg_err_prob = 0;
+        }
+        for (int i = 0; i < key_inputs.size(); ++i)
+        {
+            key_inputs[i]->herk_avg_err_prob = 0;
+        }
+
+        std::vector<double> output_signal_probs(outputs.size());
+        std::vector<double> output_error_probs(outputs.size());
+      
+        for (auto* gate : gates_sorted )
+        {
+	    gate->herk_avg_err_prob = 0;
+	}
+    }
+
+    // Estimate Init all error probabilities to 0 for herk insertion
+    void ckt_t::evaluate_probs_herk(const std::vector<bool> input_values, const std::vector<double> key_values)
+    {
+        for (int i = 0; i < ckt_inputs.size(); ++i)
+        {
+            ckt_inputs[i]->output_prob = input_values[i];
+            ckt_inputs[i]->error_prob = 0;
+        }
+        for (int i = 0; i < key_inputs.size(); ++i)
+        {
+            key_inputs[i]->output_prob = key_values[i];
+            key_inputs[i]->error_prob = 0;
+        }
+
+        std::vector<double> output_signal_probs(outputs.size());
+        std::vector<double> output_error_probs(outputs.size());
+        for (auto* gate : gates_sorted )
+        {
+            // std::cout<<"Gate "<<gate->name<<", function "<<gate->func<<" Input probs ";
+            // compute gate output probability of 1
+            std::vector<double> input_probs(gate->num_inputs());
+            std::vector<double> input_errors(gate->num_inputs());
+            if(gate->num_inputs() == 1)
+            {
+                input_probs = {gate->inputs[0]->output_prob};
+                input_errors = {gate->inputs[0]->error_prob};
+                // std::cout<<gate->inputs[0]->output_prob;
+            }
+            else if(gate->num_inputs() == 2)
+            {
+                input_probs = {gate->inputs[0]->output_prob,gate->inputs[1]->output_prob};
+                input_errors = {gate->inputs[0]->error_prob,gate->inputs[1]->error_prob};
+                // std::cout<<gate->inputs[0]->output_prob<<", "<<gate->inputs[1]->output_prob;
+            }
+            else
+            {
+                std::cout<<"More than 2 inputs!! CHECK!!\n";
+                exit(1);
+            }
+
+            //prob_correct is the probability of 1 when gate functions correctly
+            double prob_correct = gate->calc_out_prob(input_probs);
+
+            //std::cout<<" Prob correct "<<prob_correct;
+            // now use error rate of gate to find probability of 1
+	    gate->output_prob = (1-0.01*gate->error_rate)*prob_correct + (0.01*gate->error_rate)*(1-prob_correct);
+            gate->error_prob = gate->calc_out_error_prob(input_probs,input_errors,gate->error_rate);
+	    gate->herk_avg_err_prob += gate->error_prob;
+	}
+    }
+
+    // Calculate n max error gates for herk insertion. Print them.
+  void ckt_t::print_error_probs_herk(int num_herks, int num_input_samples)
+    {
+
+      std::vector<std::pair<double, std::string>> herk_ins_loc;
+
+      // Populate the herk insertion location vector with every gate
+      for (auto* gate : gates_sorted )
+        {
+	  herk_ins_loc.push_back({(gate->herk_avg_err_prob/num_input_samples), gate->name});
+	}
+      
+      // Print HERK insertion locations prior to sorting them.
+      //std::cout << "HERK Insertion Locations -- Pre-sort: ";
+      //for (const auto &item : herk_ins_loc) {
+      //  std::cout << "{" << item.first << "," << item.second << "}" << std::endl;
+      //}
+
+      // Sort the HERK insertion locations so that we only insert
+      // highest error regions of the circuit
+      std::sort(herk_ins_loc.begin(), herk_ins_loc.end());
+      std::reverse(herk_ins_loc.begin(),herk_ins_loc.end());
+
+      // Print HERK insertion locations after sorting them.
+      std::cout << "HERK Insertion Locations -- Post-sort: \n";
+      int i = 1;
+      for (const auto &item : herk_ins_loc) {
+
+	// Print where the HERK should be inserted
+	std::cout << "HERK " << i << " at output of " << item.second << " with estimated error rate " << item.first << std::endl;
+
+	// Print only the necessary insertion points here
+	if(i == num_herks)
+	  break;
+	else
+	  i++;
+      }
+
+    }
+  
     // Ankit - A function to compute output vector signal probabilities 
     // given input and key, without sampling, that is, finding an expected value
     // using the estimated or actual error rate, or no error at all.
     std::pair<std::vector<double>,std::vector<double>> ckt_t::evaluate_probs(const std::vector<bool> input_values, const std::vector<double> key_values, bool error, bool est)
     {
-        // bool est tells us if estimated error rates are to be used
 
         for (int i = 0; i < ckt_inputs.size(); ++i)
         {
@@ -1115,7 +1227,8 @@ namespace ckt_n {
 
             //prob_correct is the probability of 1 when gate functions correctly
             double prob_correct = gate->calc_out_prob(input_probs);
-            // std::cout<<" Prob correct "<<prob_correct;
+
+            //std::cout<<" Prob correct "<<prob_correct;
             // now use error rate of gate to find probability of 1
             if(error)
             {
@@ -1136,17 +1249,19 @@ namespace ckt_n {
                 gate->output_prob = prob_correct;
                 gate->error_prob = 0;
             }            
-        }
+	}
 
-        // std::cout<<"Output probs = ";
-        // std::cout.precision(3);
+	//exit(1);
+	//std::cout<<"Name: "<<gate->name<<" Function: "<<gate->func;
+        //std::cout<<"Output probs = ";
+        //std::cout.precision(3);
         for (int i = 0; i < outputs.size(); ++i)
         {
             output_signal_probs[i] = outputs[i]->output_prob;
             output_error_probs[i] = outputs[i]->error_prob;
-            // std::cout<<output_probs[i]<<", ";
+            //std::cout<<output_probs[i]<<", ";
         }
-        // std::cout<<"\n";
+        //std::cout<<"\n";
 
         std::pair<std::vector<double>,std::vector<double>> output_probs = std::make_pair(output_signal_probs,output_error_probs);
         return output_probs;
@@ -1158,12 +1273,13 @@ namespace ckt_n {
         // std::cout<<"Entering dump_gate_info\n";
         if(!gate->is_gate())
             std::cout<<"ALERT: "<<gate->name<<" is not a gate\n";
-        std::cout<<"Name: "<<gate->name<<" Function: "<<gate->func;
+        std::cout<<"Name: "<<gate->name<<" Function: "<<gate->func<<"\n";
         // std::cout<<" Inputs: "<<gate->inputs<<" fanouts: "<<gate->fanouts;
         // std::cout<<"is Keygate?: "<<gate->is_keygate()<<" level = "<<gate->level<<"\n";
         std::cout<<" Error rate = "<<gate->error_rate<<"\n";
-        // std::cout<<" Output prob = "<<gate->output_prob<<"\n";
-        // std::cout<<" Level = "<<gate->level<<"\n";
+        std::cout<<" Output prob = "<<gate->output_prob<<"\n";
+	std::cout<<" Error prob = "<<gate->error_prob<<"\n";
+	std::cout<<" Level = "<<gate->level<<"\n";
         // if(gate->error_rate>0)
         //     std::cout<<"Gate "<<gate->name<<" has error rate "<<gate->error_rate<<"\n";
         if(gate->num_inputs()>=3)
