@@ -33,28 +33,28 @@ The last line displayed in the command line specifies the best key found.
 
 # High Error Rate Keys - HERK
 
-In order to mitigate SAT-based attacks against probablistic circuits, the High Error Rate Keys (HERK) technique was developed. HERKs function by hiding the correct obfuscation key under regions/nodes of high stochastic noise within the circuit. By doing so, it becomes extremely hard for the attacker to infer the correct function of the circuit, thwarting SAT-based attacks on probablistic circuits, such as Stat-SAT or PSAT. This work has been published in the TCAD manuscript cited below. We direct the interested reader to this manuscript for additional details and theory regarding the HERK technique.
+In order to mitigate SAT-based attacks against probablistic circuits, the High Error Rate Keys (HERK) technique was developed. HERKs function by hiding the correct obfuscation key under regions/nodes of high stochastic noise within a probabilistic circuit. By doing so, it becomes extremely hard for the attacker to infer the correct secret key from the probalistic noise through SAT-based attacks that require some degeree of deterministic circuit behavior, such as StatSAT or PSAT. This work has been published in the TCAD manuscript cited below. We direct the interested reader to this manuscript for additional details and theory on the HERK technique.
 
 
 	Zuzak, M., Mondal, A., & Srivastava, A. (2021). Evaluating the Security of Logic-Locked Probabilistic Circuits. IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems.
 
 This work can also be found online at: https://ieeexplore.ieee.org/abstract/document/9512283
 
-The StatSAT Attack engine has been updated to automatically identify HERK insertion points within benchmark circuits. In order to do so, the -H flag has been added. This flag can be used with the ./sld command, which is located in */source/src*. This command must be run with the following arguments in order to identify HERK insertion locations within a given benchmark circuit:
+The StatSAT Attack engine has been updated to automatically identify HERK insertion points within benchmark circuits. In order to do so, the -H flag has been added. This flag can be used with the ./sld command, which is located in */source/src* after building the repo. This command must be run with the following arguments in order to identify HERK insertion locations within a given benchmark circuit:
 
 	./sld -H 1 <path_to_locked_circuit> <path_to_original_circuit> <partial_path_to_stoch_file>
 	
-Note that HERKs are intended as a compound approach to locking, therefore we consider an already obfuscated circuit in order to find HERK insertion locations (rather than the oracle circuit). Upon running this command, the user will be provided the ability to edit the number of random inputs used to identify HERK insertion locations as well as the number of HERK insertion locations to identify in the provided benchmark circuit through on screen prompts. An overview of the procedure to identify these HERK insertion locations as well as definitions of what each of these parameters mean in practice can be found in the TCAD manuscript linked above.
+Note that HERKs are intended as a compound approach to locking, therefore, we consider an already obfuscated circuit in order to find HERK insertion locations (rather than an un-obfuscated oracle circuit). Upon running this command, the user will be asked to edit the number of random inputs used to identify HERK insertion locations as well as the number of HERK insertion locations to be identified in the provided benchmark circuit through on screen prompts. An overview of the procedure to identify these HERK insertion locations as well as definitions of what each of these parameters mean in practice can be found in the TCAD manuscript linked above.
 
-An example command to perform HERK insertion is as follows:
+An example command to perform HERK insertion in the SFLL-HD6 locked b14 benchmark is as follows:
 
 	./sld -H 1 ../../benchmarks/SFLL/b14/b14_sfllhd6_k16.bench ../../benchmarks/ORIGINAL/b14_oracle.bench b14_oracle/error_0_2/b14_sfllhd6_k16.bench.stoch
 
-This command, by default, would identify 10 HERK insertion locations in the b14 benchark circuit obfuscated with SFLL using 100 random input patterns to identify these locations. The output of this command would appear as follows:
+This command, by default, would identify 10 HERK insertion locations in the b14 benchark circuit obfuscated with SFLL-HD6 using 100 random input patterns to identify these locations. The output of this command would appear as follows:
 
 	HERK Insertion Locations -- Post-sort: 
 	HERK 1 at output of n4086 with estimated error rate 0.242699
 	HERK 2 at output of n4085 with estimated error rate 0.242699
 	...
 
-Each of these lines prints the name of a gate in the .bench file provided to the tool where a HERK should be inserted as well as the error estimated at this location using Boolean Difference Calculus. For example, HERK 1 should be inserted at the output of n4086. With this data, a HERK can be manually inserted at this location by editing the bench file to add a XOR gate driven simultaneously by a key input and the output of the listed gate. This gate is known as a HERK. The output of the HERK gate would fan-out to every gate that was previously connected to the output of the gate identified as the HERK insertion point. Once again, a more deailed overview of the HERK insertion procedure can be found in the cited TCAD manuscript above.
+Each of the above lines contains the name of a gate in the provided b14 .bench file where a HERK gate should be inserted and the error estimated at this location using Boolean Difference Calculus. For example, HERK 1 should be inserted at the output of gate n4086. The error at this location was calculated to be ~24% for the random set of input patterns used. With this data, a HERK can be manually inserted at this location by editing the .bench file to insert a XOR gate driven simultaneously by a key input and the output of the listed gate. This gate is known as a HERK gate. The output of the HERK gate would fan-out to every gate that was previously connected to the output of the gate identified as the HERK insertion point. Once again, a more deailed overview of the HERK insertion procedure can be found in the cited TCAD manuscript above.
